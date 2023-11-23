@@ -11,38 +11,27 @@
             </li>
           </ul>
           <ul class="fl sui-tag">
-            <li class="with-x">手机</li>
-            <li class="with-x">iphone<i>×</i></li>
-            <li class="with-x">华为<i>×</i></li>
-            <li class="with-x">OPPO<i>×</i></li>
+            <li class="with-x" v-if="searchParams.categoryName">{{ searchParams.categoryName }}<i
+                @click="removeCategoryName">×</i></li>
+            <li class="with-x" v-if="searchParams.keyword">{{ searchParams.keyword }}<i @click="removeKeyword">×</i></li>
+            <li class="with-x" v-if="searchParams.trademark">{{ searchParams.trademark.split(":")[1] }}<i
+                @click="removeTrademark">×</i></li>
+            <li class="with-x" v-for="(attrValue, index) in searchParams.props" :key="index">{{
+              attrValue.split(":")[1] }}<i @click="removeAttvalue(index)">×</i></li>
           </ul>
         </div>
-
         <!--selector-->
-        <SearchSelector />
-
+        <SearchSelector @trademarkInfo="trademarkInfo" @attrInfo="attrInfo" />
         <!--details-->
         <div class="details clearfix">
           <div class="sui-navbar">
             <div class="navbar-inner filter">
               <ul class="sui-nav">
-                <li class="active">
-                  <a href="#">综合</a>
+                <li :class="{ active: isOne }" @click="changeOrder('1')">
+                  <a>综合 <span v-if="isOne && isAsc">↑</span><span v-else-if="isOne && isDesc">↓</span></a>
                 </li>
-                <li>
-                  <a href="#">销量</a>
-                </li>
-                <li>
-                  <a href="#">新品</a>
-                </li>
-                <li>
-                  <a href="#">评价</a>
-                </li>
-                <li>
-                  <a href="#">价格⬆</a>
-                </li>
-                <li>
-                  <a href="#">价格⬇</a>
+                <li :class="{ active: isTwo }" @click="changeOrder('2')">
+                  <a>价格 <span v-if="isTwo && isAsc">↑</span><span v-else-if="isTwo && isDesc">↓</span></a>
                 </li>
               </ul>
             </div>
@@ -52,7 +41,9 @@
               <li class="yui3-u-1-5" v-for="(good, index) in goodsList" :key="index">
                 <div class="list-wrap">
                   <div class="p-img">
-                    <a href="item.html" target="_blank"><img :src="good.defaultImg" /></a>
+                    <router-link :to="`/detail/${good.id}`">
+                      <img :src="good.defaultImg" />
+                    </router-link>
                   </div>
                   <div class="price">
                     <strong>
@@ -75,35 +66,8 @@
               </li>
             </ul>
           </div>
-          <div class="fr page">
-            <div class="sui-pagination clearfix">
-              <ul>
-                <li class="prev disabled">
-                  <a href="#">«上一页</a>
-                </li>
-                <li class="active">
-                  <a href="#">1</a>
-                </li>
-                <li>
-                  <a href="#">2</a>
-                </li>
-                <li>
-                  <a href="#">3</a>
-                </li>
-                <li>
-                  <a href="#">4</a>
-                </li>
-                <li>
-                  <a href="#">5</a>
-                </li>
-                <li class="dotted"><span>...</span></li>
-                <li class="next">
-                  <a href="#">下一页»</a>
-                </li>
-              </ul>
-              <div><span>共10页&nbsp;</span></div>
-            </div>
-          </div>
+          <Pagination :pageNo="searchParams.pageNo" :pageSize="searchParams.pageSize" :total="total" :continues="5"
+            @getPageNo="getPageNo" />
         </div>
       </div>
     </div>
@@ -112,7 +76,7 @@
 
 <script>
 import SearchSelector from './SearchSelector/SearchSelector'
-import { mapGetters } from 'vuex';
+import { mapGetters, mapState } from 'vuex';
 export default {
   name: 'Search',
   data() {
@@ -123,9 +87,9 @@ export default {
         category3Id: "",
         categoryName: "",
         keyword: "",
-        order: "",
+        order: "1:asc",
         pageNo: 1,
-        pageSize: 5,
+        pageSize: 10,
         props: [],
         trademark: "",
       }
@@ -136,18 +100,96 @@ export default {
   },
   beforeMount() {
     Object.assign(this.searchParams, this.$route.query, this.$route.params)
-    console.log(this.$route.query);
-    console.log(this.$route.params);
   },
   mounted() {
     this.getData()
   },
   computed: {
-    ...mapGetters(['goodsList'])
+    ...mapGetters(['goodsList']),
+    isOne() {
+      return this.searchParams.order.indexOf('1') != -1
+    },
+    isTwo() {
+      return this.searchParams.order.indexOf('2') != -1
+    },
+    isAsc() {
+      return this.searchParams.order.indexOf('asc') != -1
+    },
+    isDesc() {
+      return this.searchParams.order.indexOf('desc') != -1
+    },
+    ...mapState({
+      total: state => state.search.searchList.total
+    })
   },
   methods: {
     getData() {
       this.$store.dispatch('getSearchList', this.searchParams)
+    },
+    removeCategoryName() {
+      this.searchParams.categoryName = undefined
+      this.searchParams.category1Id = undefined
+      this.searchParams.category2Id = undefined
+      this.searchParams.category3Id = undefined
+      this.getData()
+      if (this.$route.params) {
+        this.$router.push({ name: "search", params: this.$route.params })
+
+      }
+    },
+    removeKeyword() {
+      this.searchParams.keyword = undefined
+      this.getData()
+      this.$bus.$emit("clear")
+      if (this.$route.query) {
+        this.$router.push({ name: "search", query: this.$route.query })
+      }
+    },
+    trademarkInfo(trademark) {
+      console.log(123);
+      this.searchParams.trademark = `${trademark.tmId}:${trademark.tmName}`
+      this.getData()
+    },
+    removeTrademark() {
+      this.searchParams.trademark = undefined
+      this.getData()
+    },
+    attrInfo(attr, attrValue) {
+      let props = `${attr.attrId}:${attrValue}:${attr.attrName}`
+      if (this.searchParams.props.indexOf(props) == -1) {
+        this.searchParams.props.push(props)
+      }
+      this.getData()
+    },
+    removeAttvalue(index) {
+      this.searchParams.props.splice(index, 1)
+      this.getData()
+    },
+    changeOrder(flag) {
+      let originFlag = this.searchParams.order.split(":")[0]
+      let originSort = this.searchParams.order.split(":")[1]
+      let newOrder = ''
+      if (flag == originFlag) {
+        newOrder = `${originFlag}:${originSort == "desc" ? "asc" : "desc"}`
+      } else {
+        newOrder = `${flag}:${'desc'}`
+      }
+      this.searchParams.order = newOrder
+      this.getData()
+    },
+    getPageNo(pageNo) {
+      this.searchParams.pageNo = pageNo
+      this.getData()
+    }
+  },
+  watch: {
+    $route(newValue, oldValue) {
+      Object.assign(this.searchParams, this.$route.query, this.$route.params)
+      this.getData()
+
+      this.searchParams.category1Id = undefined
+      this.searchParams.category2Id = undefined
+      this.searchParams.category3Id = undefined
     }
   }
 }

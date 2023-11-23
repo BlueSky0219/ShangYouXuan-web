@@ -1,41 +1,15 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 
-import Home from "@/pages/Home/Index.vue"
-import Search from "@/pages/Search/Index.vue"
-import Register from "@/pages/Register/Index.vue"
-import Login from "@/pages/Login/Index.vue"
+import routes from './routes.js'
 
 Vue.use(VueRouter);
 
 export default new VueRouter({
-    routes: [
-        {
-            path: "/home",
-            component: Home,
-            meta: { show: true }
-        },
-        {
-            path: "/search/:keyword?",
-            component: Search,
-            name:"search",
-            meta: { show: true }
-        },
-        {
-            path: "/register",
-            component: Register,
-            meta: { show: false }
-        },
-        {
-            path: "/login",
-            component: Login,
-            meta: { show: false }
-        },
-        {
-            path: "/",
-            redirect: '/home'
-        }
-    ]
+    routes,
+    scrollBehavior() {
+        return { y: 0 }
+    },
 })
 
 let originPush = VueRouter.prototype.push;
